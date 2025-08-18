@@ -31,6 +31,7 @@ COPY ./stress ./stress/
 COPY ./sync ./sync/
 COPY ./vendored ./vendored/
 COPY ./testing/sqlite_test_ext ./testing/sqlite_test_ext/
+COPY ./testing/unreliable-libc ./testing/unreliable-libc/
 RUN cargo chef prepare --bin turso_stress --recipe-path recipe.json
 
 #
@@ -73,6 +74,7 @@ COPY --from=planner /app/sync ./sync/
 COPY --from=planner /app/parser ./parser/
 COPY --from=planner /app/vendored ./vendored/
 COPY --from=planner /app/testing/sqlite_test_ext ./testing/sqlite_test_ext/
+COPY --from=planner /app/testing/unreliable-libc ./testing/unreliable-libc/
 
 RUN if [ "$antithesis" = "true" ]; then \
         cp /opt/antithesis/libvoidstar.so /usr/lib/libvoidstar.so && \
@@ -85,6 +87,9 @@ RUN if [ "$antithesis" = "true" ]; then \
 WORKDIR /app/bindings/python
 RUN maturin build
 
+WORKDIR /app/testing/unreliable-libc
+RUN make
+
 #
 # The final image.
 #
@@ -96,6 +101,7 @@ RUN pip install antithesis
 WORKDIR /app
 EXPOSE 8080
 COPY --from=builder /usr/lib/libvoidstar.so* /usr/lib/
+COPY --from=builder /app/testing/unreliable-libc/unreliable-libc.so /usr/lib/
 COPY --from=builder /app/target/antithesis/turso_stress /bin/turso_stress
 COPY --from=builder /app/target/antithesis/turso_stress /symbols
 COPY stress/docker-entrypoint.sh /bin
