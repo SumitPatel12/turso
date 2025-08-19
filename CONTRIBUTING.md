@@ -211,6 +211,21 @@ Once Maturin is installed, you can build the crate and install it as a Python mo
 cd bindings/python && maturin develop
 ```
 
+## Fault injection with unreliable libc
+
+First, build the unreliable libc:
+
+```
+cd testing/unreliable-libc
+make
+```
+
+The run the stress testing tool with fault injection enabled:
+
+```
+RUST_BACKTRACE=1 LD_PRELOAD=./testing/unreliable-libc/unreliable-libc.so cargo run -p turso_stress -- --nr-iterations 10000
+```
+
 ## Antithesis
 
 Antithesis is a testing platform for finding bugs with reproducibility. In
