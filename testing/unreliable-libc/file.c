@@ -87,5 +87,13 @@ int fsync(int fd)
 __attribute__((constructor))
 static void init(void)
 {
-	srand48(time(NULL));
+	char *env_seed = getenv("UNRELIABLE_LIBC_SEED");
+	long seedval;
+	if (!env_seed) {
+		seedval = time(NULL);
+	} else {
+		seedval = atoi(env_seed);
+	}
+	printf("UNRELIABLE_LIBC_SEED = %ld\n", seedval);
+	srand48(seedval);
 }
