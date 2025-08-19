@@ -494,9 +494,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                             panic!("Error creating table: {}", e);
                         } else {
                             println!("Error creating table: {e}");
+                            // Exit on fatal errors like ENOSPC
+                            std::process::exit(1);
                         }
                     }
-                    _ => panic!("Error creating table: {}", e),
+                    _ => {
+                        println!("Error creating table: {e}");
+                        // Exit on any other error during table creation
+                        std::process::exit(1);
+                    }
                 }
             }
         }
