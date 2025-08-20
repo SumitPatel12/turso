@@ -192,19 +192,25 @@ impl File for UnixFile {
             .file
             .try_lock()
             .ok_or_else(|| LimboError::LockingError("Failed locking file".to_string()))?;
-        let result = {
+        let result = unsafe {
             let r = c.as_read();
             let buf = r.buf();
-            rustix::io::pread(file.as_fd(), buf.as_mut_slice(), pos as u64)
+            let slice = buf.as_mut_slice();
+            libc::pread(
+                file.as_raw_fd(),
+                slice.as_mut_ptr() as *mut libc::c_void,
+                slice.len(),
+                pos as libc::off_t,
+            )
         };
-        match result {
-            Ok(n) => {
-                trace!("pread n: {}", n);
-                // Read succeeded immediately
-                c.complete(n as i32);
-                Ok(c)
-            }
-            Err(e) => Err(e.into()),
+        if result == -1 {
+            let e = std::io::Error::last_os_error();
+            Err(e.into())
+        } else {
+            trace!("pread n: {}", result);
+            // Read succeeded immediately
+            c.complete(result as i32);
+            Ok(c)
         }
     }
 
@@ -260,14 +266,14 @@ impl File for UnixFile {
             .file
             .try_lock()
             .ok_or_else(|| LimboError::LockingError("Failed locking file".to_string()))?;
-        let result = fs::fsync(file.as_fd());
-        match result {
-            Ok(()) => {
-                trace!("fsync");
-                c.complete(0);
-                Ok(c)
-            }
-            Err(e) => Err(e.into()),
+        let result = unsafe { libc::fsync(file.as_raw_fd()) };
+        if result == -1 {
+            let e = std::io::Error::last_os_error();
+            Err(e.into())
+        } else {
+            trace!("fsync");
+            c.complete(0);
+            Ok(c)
         }
     }
 
